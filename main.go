@@ -10,8 +10,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/rs/zerolog/log"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/nodebreaker0-0/umee-autod/client"
 	"github.com/nodebreaker0-0/umee-autod/config"
@@ -38,7 +39,7 @@ func NewAccountDispenser(c *client.Client, mnemonics []string) *AccountDispenser
 
 func (d *AccountDispenser) Next() error {
 	mnemonic := d.mnemonics[d.i]
-	addr, privKey, err := wallet.RecoverAccountFromMnemonic(mnemonic, "", "umee")
+	addr, privKey, err := wallet.IBCRecoverAccountFromMnemonic(mnemonic, "", "44'/118'/0'/0/0", "umee")
 	if err != nil {
 		return err
 	}
@@ -84,13 +85,20 @@ func (d *AccountDispenser) DecAccSeq() {
 	d.accSeq--
 }
 
-func MultiMsgWithdrawCommissionAndDelegate(valAddr sdktypes.ValAddress, delAddr sdktypes.AccAddress, coin sdktypes.Coin) (msgs []sdktypes.Msg, err error) {
-	withdrawMsg := distrtypes.NewMsgWithdrawValidatorCommission(valAddr)
+func MultiMsgWithdrawCommissionAndDelegate(valAddr string, delAddr string, coin sdktypes.Coin) (msgs []sdktypes.Msg, err error) {
+
+	withdrawMsg := &distrtypes.MsgWithdrawValidatorCommission{
+		ValidatorAddress: valAddr,
+	}
+
 	if err := withdrawMsg.ValidateBasic(); err != nil {
 		return []sdktypes.Msg{}, err
 	}
-
-	delegateMsg := stakingtypes.NewMsgDelegate(delAddr, valAddr, coin)
+	delegateMsg := &stakingtypes.MsgDelegate{
+		DelegatorAddress: delAddr,
+		ValidatorAddress: valAddr,
+		Amount:           coin,
+	}
 	if err := delegateMsg.ValidateBasic(); err != nil {
 		return []sdktypes.Msg{}, err
 	}
@@ -114,16 +122,6 @@ func main() {
 
 	queryClient := types.NewQueryClient(client.GRPC)
 
-	res, err := queryClient.ValidatorCommission(
-		ctx,
-		&types.QueryValidatorCommissionRequest{ValidatorAddress: cfg.Custom.ValidatorAddr},
-	)
-	if err != nil {
-		println(err)
-	}
-	a := res.GetCommission().Commission.String()
-	println(a)
-
 	chainID, err := client.RPC.GetNetworkChainID(ctx)
 	if err != nil {
 		panic(err)
@@ -138,8 +136,6 @@ func main() {
 	if err := d.Next(); err != nil {
 		panic(fmt.Errorf("get next account: %w", err))
 	}
-
-	blockTimes := make(map[int64]time.Time)
 	st, err := client.RPC.Status(ctx)
 	if err != nil {
 		panic(fmt.Errorf("get status: %w", err))
@@ -153,10 +149,7 @@ func main() {
 
 	targetHeight := startingHeight
 
-	//started := time.Now()
-	sent := 0
-
-	for i := 0; i < 100; i++ {
+	for {
 		st, err := client.RPC.Status(ctx)
 		if err != nil {
 			panic(fmt.Errorf("get status: %w", err))
@@ -165,21 +158,50 @@ func main() {
 			log.Warn().Int64("expected", targetHeight-1).Int64("got", st.SyncInfo.LatestBlockHeight).Msg("mismatching block height")
 			targetHeight = st.SyncInfo.LatestBlockHeight + 1
 		}
-		delegator, err := config.AccAddressFromBech32(d.addr, "umee")
-		println("deladdress", delegator.String())
+		res, err := queryClient.ValidatorCommission(
+			ctx,
+			&types.QueryValidatorCommissionRequest{ValidatorAddress: cfg.Custom.ValidatorAddr},
+		)
 		if err != nil {
-			panic(err)
+			println(err)
 		}
-		validator, err := config.ValAddressFromBech32(d.addr, "umee")
-		println("valaddress", validator.String())
+		delamount := res.GetCommission().Commission.String()
+		convertdelamount, err := sdktypes.ParseCoinNormalized(delamount)
 		if err != nil {
-			panic(err)
+			println(err)
 		}
-		// TODO: fix staking amount using queried commission
-		staking := sdktypes.NewCoin("uumee", sdktypes.OneInt())
-		msgs, err := MultiMsgWithdrawCommissionAndDelegate(validator, delegator, staking)
-		fmt.Println(msgs, blockTimes)
 
+		accountcoins, err := client.GRPC.GetAllBalances(ctx, d.addr)
+		if err != nil {
+			println(err)
+		}
+
+		println("delamount: ", convertdelamount.String())
+		var msgs []sdktypes.Msg
+		if len(accountcoins) != 0 {
+			println("accountamount: ", accountcoins[0].Amount.String())
+			if delamount != "" {
+				totalamount := convertdelamount.Add(accountcoins[0])
+				msgs, _ = MultiMsgWithdrawCommissionAndDelegate(cfg.Custom.ValidatorAddr, d.addr, totalamount.AddAmount(sdktypes.NewInt(18)))
+				fmt.Println(msgs)
+			} else {
+				time.Sleep(10000 * time.Millisecond)
+				continue
+			}
+		}
+
+		if msgs == nil {
+			if delamount != "" {
+				msgs, err = MultiMsgWithdrawCommissionAndDelegate(cfg.Custom.ValidatorAddr, d.addr, convertdelamount)
+				if err != nil {
+					println(err)
+				}
+				fmt.Println(msgs)
+				break
+			}
+			time.Sleep(10000 * time.Millisecond)
+			continue
+		}
 		accSeq := d.IncAccSeq()
 		txByte, err := tx.Sign(ctx, accSeq, d.AccNum(), d.PrivKey(), msgs...)
 		if err != nil {
@@ -189,6 +211,7 @@ func main() {
 		if err != nil {
 			panic(fmt.Errorf("broadcast tx: %w", err))
 		}
+		println(resp.TxResponse.RawLog)
 		if resp.TxResponse.Code != 0 {
 			if resp.TxResponse.Code == 0x14 {
 				log.Warn().Msg("mempool is full, stopping")
@@ -206,7 +229,13 @@ func main() {
 				panic(fmt.Sprintf("%#v\n", resp.TxResponse))
 			}
 		}
-		sent++
+
+		//time.Sleep(60000 * time.Millisecond)
+		if err := rpcclient.WaitForHeight(client.RPC, targetHeight, nil); err != nil {
+			panic(fmt.Errorf("wait for height: %w", err))
+		}
+		targetHeight++
+		println("next in tx block:", targetHeight)
 	}
 
 }
