@@ -1,0 +1,14 @@
+[rpc]
+address = "http://localhost:26657"
+
+[grpc]
+address = "http://localhost:9090"
+
+[custom]
+mnemonics = ["merry traffic auction calm forum cart phrase pluck quick gold mango genre funny crater mandate ten hand town cement grant rebuild cash whale sing"]
+
+gas_limit = 100000000
+fee_denom = "uumee"
+fee_amount = 0
+memo = ""
+validatoraddr = "umeevaloper1fp0sc558kxrnc5rvyym4wesl365s2emkwj4r86"

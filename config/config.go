@@ -15,8 +15,9 @@ var (
 
 // Config defines all necessary configuration parameters.
 type Config struct {
-	RPC  *RPCConfig  `toml:"rpc"`
-	GRPC *GRPCConfig `toml:"grpc"`
+	RPC    *RPCConfig    `toml:"rpc"`
+	GRPC   *GRPCConfig   `toml:"grpc"`
+	Custom *CustomConfig `toml:"custom"`
 }
 
 // RPCConfig contains the configuration of the RPC endpoint.
@@ -27,6 +28,14 @@ type RPCConfig struct {
 // GRPCConfig contains the configuration of the gRPC endpoint.
 type GRPCConfig struct {
 	Address string `toml:"address"`
+}
+type CustomConfig struct {
+	Mnemonics     []string `toml:"mnemonics"`
+	GasLimit      int64    `toml:"gas_limit"`
+	FeeDenom      string   `toml:"fee_denom"`
+	FeeAmount     int64    `toml:"fee_amount"`
+	Memo          string   `toml:"memo"`
+	ValidatorAddr string   `toml:"validatoraddr"`
 }
 
 // SetupConfig takes the path to a configuration file and returns the properly parsed configuration.
