@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
@@ -100,41 +98,6 @@ func MultiMsgWithdrawCommissionAndDelegate(valAddr sdktypes.ValAddress, delAddr 
 	return []sdktypes.Msg{withdrawMsg, delegateMsg}, nil
 }
 
-// AccAddressFromBech32 creates an AccAddress from a Bech32 string.
-func AccAddressFromBech32(address, prefix string) (addr sdktypes.AccAddress, err error) {
-	if len(strings.TrimSpace(address)) == 0 {
-		return sdktypes.AccAddress{}, errors.New("empty address string is not allowed")
-	}
-
-	bz, err := sdktypes.GetFromBech32(address, prefix)
-	if err != nil {
-		return nil, err
-	}
-
-	err = sdktypes.VerifyAddressFormat(bz)
-	if err != nil {
-		return nil, err
-	}
-
-	return sdktypes.AccAddress(bz), nil
-}
-func ValAddressFromBech32(address string, prefix string) (addr sdktypes.ValAddress, err error) {
-	if len(strings.TrimSpace(address)) == 0 {
-		return sdktypes.ValAddress{}, errors.New("empty address string is not allowed")
-	}
-
-	bz, err := sdktypes.GetFromBech32(address, prefix)
-	if err != nil {
-		return nil, err
-	}
-
-	err = sdktypes.VerifyAddressFormat(bz)
-	if err != nil {
-		return nil, err
-	}
-
-	return sdktypes.ValAddress(bz), nil
-}
 func main() {
 	ctx := context.Background()
 
@@ -202,12 +165,12 @@ func main() {
 			log.Warn().Int64("expected", targetHeight-1).Int64("got", st.SyncInfo.LatestBlockHeight).Msg("mismatching block height")
 			targetHeight = st.SyncInfo.LatestBlockHeight + 1
 		}
-		delegator, err := AccAddressFromBech32(d.addr, "umee")
+		delegator, err := config.AccAddressFromBech32(d.addr, "umee")
 		println("deladdress", delegator.String())
 		if err != nil {
 			panic(err)
 		}
-		validator, err := ValAddressFromBech32(d.addr, "umee")
+		validator, err := config.ValAddressFromBech32(d.addr, "umee")
 		println("valaddress", validator.String())
 		if err != nil {
 			panic(err)

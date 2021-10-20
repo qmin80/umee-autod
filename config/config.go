@@ -3,9 +3,12 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pelletier/go-toml"
 
+	"errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -67,4 +70,39 @@ func ParseString(configData []byte) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// AccAddressFromBech32 creates an AccAddress from a Bech32 string.
+func AccAddressFromBech32(address, prefix string) (addr sdktypes.AccAddress, err error) {
+	if len(strings.TrimSpace(address)) == 0 {
+		return sdktypes.AccAddress{}, errors.New("empty address string is not allowed")
+	}
+
+	bz, err := sdktypes.GetFromBech32(address, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sdktypes.VerifyAddressFormat(bz)
+	if err != nil {
+		return nil, err
+	}
+
+	return sdktypes.AccAddress(bz), nil
+}
+func ValAddressFromBech32(address string, prefix string) (addr sdktypes.ValAddress, err error) {
+	if len(strings.TrimSpace(address)) == 0 {
+		return sdktypes.ValAddress{}, errors.New("empty address string is not allowed")
+	}
+
+	bz, err := sdktypes.GetFromBech32(address, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sdktypes.VerifyAddressFormat(bz)
+	if err != nil {
+		return nil, err
+	}
+	return sdktypes.ValAddress(bz), nil
 }
