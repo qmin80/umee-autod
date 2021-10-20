@@ -2,29 +2,36 @@ package main
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/nodebreaker0-0/umee-autod/client"
 	"github.com/nodebreaker0-0/umee-autod/config"
 )
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
+
 	cfg, err := config.Read(config.DefaultConfigPath)
 	if err != nil {
-		return err
+		println(err)
+
 	}
-	client, err := client.NewClient(IBCchain.Rpc, IBCchain.Grpc)
+	client, err := client.NewClient(cfg.RPC.Address, cfg.GRPC.Address)
 	if err != nil {
-		return err
+		println(err)
 	}
 	defer client.Stop() // nolint: errcheck
-	defer client.GRPC.Close()
-	grpcclient := client.GRPC
-	coins, err := grpcclient.GetAllBalances(ctx, IBCchain.DstAddress)
+
+	queryClient := types.NewQueryClient(client.GRPC)
+
+	res, err := queryClient.ValidatorCommission(
+		ctx,
+		&types.QueryValidatorCommissionRequest{ValidatorAddress: cfg.Custom.ValidatorAddr},
+	)
 	if err != nil {
-		return err
+		println(err)
 	}
-	fmt.Println(IBCchain.ChainId, " | ", coins)
+	a := res.GetCommission().Commission.String()
+	println(a)
+
 }
