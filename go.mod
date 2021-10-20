@@ -4,10 +4,12 @@ go 1.16
 
 require (
 	github.com/cosmos/cosmos-sdk v0.44.2
+	github.com/cosmos/go-bip39 v1.0.0
 	github.com/pelletier/go-toml v1.9.3
 	github.com/rs/zerolog v1.23.0
-	github.com/tendermint/liquidity v1.4.0 // indirect
+	github.com/stretchr/testify v1.7.0
 	github.com/tendermint/tendermint v0.34.13
+	github.com/test-go/testify v1.1.4
 	google.golang.org/grpc v1.40.0
 )
 
