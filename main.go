@@ -2,21 +2,23 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
-	"github.com/rs/zerolog/log"
+
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/distribution/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/rs/zerolog/log"
 	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
 	"github.com/nodebreaker0-0/umee-autod/client"
 	"github.com/nodebreaker0-0/umee-autod/config"
 	"github.com/nodebreaker0-0/umee-autod/tx"
 	"github.com/nodebreaker0-0/umee-autod/wallet"
-
 )
 
 type AccountDispenser struct {
@@ -84,7 +86,6 @@ func (d *AccountDispenser) DecAccSeq() {
 	d.accSeq--
 }
 
-
 func MultiMsgWithdrawCommissionAndDelegate(valAddr sdktypes.ValAddress, delAddr sdktypes.AccAddress, coin sdktypes.Coin) (msgs []sdktypes.Msg, err error) {
 	withdrawMsg := distrtypes.NewMsgWithdrawValidatorCommission(valAddr)
 	if err := withdrawMsg.ValidateBasic(); err != nil {
@@ -99,6 +100,41 @@ func MultiMsgWithdrawCommissionAndDelegate(valAddr sdktypes.ValAddress, delAddr 
 	return []sdktypes.Msg{withdrawMsg, delegateMsg}, nil
 }
 
+// AccAddressFromBech32 creates an AccAddress from a Bech32 string.
+func AccAddressFromBech32(address, prefix string) (addr sdktypes.AccAddress, err error) {
+	if len(strings.TrimSpace(address)) == 0 {
+		return sdktypes.AccAddress{}, errors.New("empty address string is not allowed")
+	}
+
+	bz, err := sdktypes.GetFromBech32(address, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sdktypes.VerifyAddressFormat(bz)
+	if err != nil {
+		return nil, err
+	}
+
+	return sdktypes.AccAddress(bz), nil
+}
+func ValAddressFromBech32(address string, prefix string) (addr sdktypes.ValAddress, err error) {
+	if len(strings.TrimSpace(address)) == 0 {
+		return sdktypes.ValAddress{}, errors.New("empty address string is not allowed")
+	}
+
+	bz, err := sdktypes.GetFromBech32(address, prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sdktypes.VerifyAddressFormat(bz)
+	if err != nil {
+		return nil, err
+	}
+
+	return sdktypes.ValAddress(bz), nil
+}
 func main() {
 	ctx := context.Background()
 
@@ -166,16 +202,18 @@ func main() {
 			log.Warn().Int64("expected", targetHeight-1).Int64("got", st.SyncInfo.LatestBlockHeight).Msg("mismatching block height")
 			targetHeight = st.SyncInfo.LatestBlockHeight + 1
 		}
-		delegator, err := sdktypes.AccAddressFromBech32(d.addr)
+		delegator, err := AccAddressFromBech32(d.addr, "umee")
+		println("deladdress", delegator.String())
 		if err != nil {
 			panic(err)
 		}
-		validator, err := sdktypes.ValAddressFromBech32(d.addr)
+		validator, err := ValAddressFromBech32(d.addr, "umee")
+		println("valaddress", validator.String())
 		if err != nil {
 			panic(err)
 		}
 		// TODO: fix staking amount using queried commission
-		staking := sdktypes.NewCoin("stake", sdktypes.OneInt())
+		staking := sdktypes.NewCoin("uumee", sdktypes.OneInt())
 		msgs, err := MultiMsgWithdrawCommissionAndDelegate(validator, delegator, staking)
 		fmt.Println(msgs, blockTimes)
 
