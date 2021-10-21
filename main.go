@@ -10,8 +10,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/nodebreaker0-0/umee-autod/client"
@@ -136,28 +134,28 @@ func main() {
 	if err := d.Next(); err != nil {
 		panic(fmt.Errorf("get next account: %w", err))
 	}
-	st, err := client.RPC.Status(ctx)
-	if err != nil {
-		panic(fmt.Errorf("get status: %w", err))
-	}
-	startingHeight := st.SyncInfo.LatestBlockHeight + 2
-	log.Info().Msgf("current block height is %d, waiting for the next block to be committed", st.SyncInfo.LatestBlockHeight)
+	//st, err := client.RPC.Status(ctx)
+	//if err != nil {
+	//	panic(fmt.Errorf("get status: %w", err))
+	//}
+	//startingHeight := st.SyncInfo.LatestBlockHeight + 2
+	//log.Info().Msgf("current block height is %d, waiting for the next block to be committed", st.SyncInfo.LatestBlockHeight)
 
-	if err := rpcclient.WaitForHeight(client.RPC, startingHeight-1, nil); err != nil {
-		panic(fmt.Errorf("wait for height: %w", err))
-	}
+	//if err := rpcclient.WaitForHeight(client.RPC, startingHeight-1, nil); err != nil {
+	//	panic(fmt.Errorf("wait for height: %w", err))
+	//}
 
-	targetHeight := startingHeight
+	//targetHeight := startingHeight
 
 	for {
-		st, err := client.RPC.Status(ctx)
-		if err != nil {
-			panic(fmt.Errorf("get status: %w", err))
-		}
-		if st.SyncInfo.LatestBlockHeight != targetHeight-1 {
-			log.Warn().Int64("expected", targetHeight-1).Int64("got", st.SyncInfo.LatestBlockHeight).Msg("mismatching block height")
-			targetHeight = st.SyncInfo.LatestBlockHeight + 1
-		}
+		//st, err := client.RPC.Status(ctx)
+		//if err != nil {
+		//	panic(fmt.Errorf("get status: %w", err))
+		//}
+		//if st.SyncInfo.LatestBlockHeight != targetHeight-1 {
+		//	log.Warn().Int64("expected", targetHeight-1).Int64("got", st.SyncInfo.LatestBlockHeight).Msg("mismatching block height")
+		//	targetHeight = st.SyncInfo.LatestBlockHeight + 1
+		//}
 		res, err := queryClient.ValidatorCommission(
 			ctx,
 			&types.QueryValidatorCommissionRequest{ValidatorAddress: cfg.Custom.ValidatorAddr},
@@ -178,30 +176,10 @@ func main() {
 
 		println("delamount: ", convertdelamount.String())
 		var msgs []sdktypes.Msg
-		if len(accountcoins) != 0 {
-			println("accountamount: ", accountcoins[0].Amount.String())
-			if delamount != "" {
-				totalamount := convertdelamount.Add(accountcoins[0])
-				msgs, _ = MultiMsgWithdrawCommissionAndDelegate(cfg.Custom.ValidatorAddr, d.addr, totalamount.AddAmount(sdktypes.NewInt(18)))
-				fmt.Println(msgs)
-			} else {
-				time.Sleep(10000 * time.Millisecond)
-				continue
-			}
-		}
+		totalamount := convertdelamount.Add(accountcoins[0])
+		msgs, _ = MultiMsgWithdrawCommissionAndDelegate(cfg.Custom.ValidatorAddr, d.addr, totalamount.SubAmount(sdktypes.NewInt(600)))
+		fmt.Println(msgs)
 
-		if msgs == nil {
-			if delamount != "" {
-				msgs, err = MultiMsgWithdrawCommissionAndDelegate(cfg.Custom.ValidatorAddr, d.addr, convertdelamount)
-				if err != nil {
-					println(err)
-				}
-				fmt.Println(msgs)
-				break
-			}
-			time.Sleep(10000 * time.Millisecond)
-			continue
-		}
 		accSeq := d.IncAccSeq()
 		txByte, err := tx.Sign(ctx, accSeq, d.AccNum(), d.PrivKey(), msgs...)
 		if err != nil {
@@ -230,12 +208,8 @@ func main() {
 			}
 		}
 
-		//time.Sleep(60000 * time.Millisecond)
-		if err := rpcclient.WaitForHeight(client.RPC, targetHeight, nil); err != nil {
-			panic(fmt.Errorf("wait for height: %w", err))
-		}
-		targetHeight++
-		println("next in tx block:", targetHeight)
+		time.Sleep(60000 * time.Millisecond)
+
 	}
 
 }
