@@ -136,13 +136,13 @@ func main() {
 	}
 	//st, err := client.RPC.Status(ctx)
 	//if err != nil {
-	//	panic(fmt.Errorf("get status: %w", err))
+	//      panic(fmt.Errorf("get status: %w", err))
 	//}
 	//startingHeight := st.SyncInfo.LatestBlockHeight + 2
 	//log.Info().Msgf("current block height is %d, waiting for the next block to be committed", st.SyncInfo.LatestBlockHeight)
 
 	//if err := rpcclient.WaitForHeight(client.RPC, startingHeight-1, nil); err != nil {
-	//	panic(fmt.Errorf("wait for height: %w", err))
+	//      panic(fmt.Errorf("wait for height: %w", err))
 	//}
 
 	//targetHeight := startingHeight
@@ -150,11 +150,11 @@ func main() {
 	for {
 		//st, err := client.RPC.Status(ctx)
 		//if err != nil {
-		//	panic(fmt.Errorf("get status: %w", err))
+		//      panic(fmt.Errorf("get status: %w", err))
 		//}
 		//if st.SyncInfo.LatestBlockHeight != targetHeight-1 {
-		//	log.Warn().Int64("expected", targetHeight-1).Int64("got", st.SyncInfo.LatestBlockHeight).Msg("mismatching block height")
-		//	targetHeight = st.SyncInfo.LatestBlockHeight + 1
+		//      log.Warn().Int64("expected", targetHeight-1).Int64("got", st.SyncInfo.LatestBlockHeight).Msg("mismatching block height")
+		//      targetHeight = st.SyncInfo.LatestBlockHeight + 1
 		//}
 		res, err := queryClient.ValidatorCommission(
 			ctx,
@@ -175,11 +175,21 @@ func main() {
 		}
 
 		println("delamount: ", convertdelamount.String())
+		if convertdelamount.String() == "0uumee" {
+			continue
+		}
+		println("accamount: ", accountcoins[0].String())
 		var msgs []sdktypes.Msg
 		totalamount := convertdelamount.Add(accountcoins[0])
-		msgs, _ = MultiMsgWithdrawCommissionAndDelegate(cfg.Custom.ValidatorAddr, d.addr, totalamount.SubAmount(sdktypes.NewInt(600)))
+		msgs, err = MultiMsgWithdrawCommissionAndDelegate(cfg.Custom.ValidatorAddr, d.addr, totalamount.SubAmount(sdktypes.NewInt(450)))
+		if err != nil {
+			println(fmt.Errorf("msgs err: %w", err))
+			continue
+		}
 		fmt.Println(msgs)
-
+		if msgs == nil {
+			continue
+		}
 		accSeq := d.IncAccSeq()
 		txByte, err := tx.Sign(ctx, accSeq, d.AccNum(), d.PrivKey(), msgs...)
 		if err != nil {
@@ -191,6 +201,11 @@ func main() {
 		}
 		println(resp.TxResponse.RawLog)
 		if resp.TxResponse.Code != 0 {
+			if resp.TxResponse.Code == 0x5 {
+				log.Warn().Msg("insufficient funds, stopping")
+				d.DecAccSeq()
+				continue
+			}
 			if resp.TxResponse.Code == 0x14 {
 				log.Warn().Msg("mempool is full, stopping")
 				d.DecAccSeq()
@@ -208,7 +223,7 @@ func main() {
 			}
 		}
 
-		time.Sleep(60000 * time.Millisecond)
+		time.Sleep(13000 * time.Millisecond)
 
 	}
 

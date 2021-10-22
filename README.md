@@ -18,7 +18,6 @@ umeed q distribution rewards umee16r2uatrq2cfqjzj7m06edkehnhzgrsqrtfa9ws
 umeed q distribution commission umeevaloper16r2uatrq2cfqjzj7m06edkehnhzgrsqrtd62l6
 umeed tx distribution withdraw-rewards umeevaloper16r2uatrq2cfqjzj7m06edkehnhzgrsqrtd62l6 --commission --from validator --keyring-backend test --chain-id test
 "gas_used":"97436"
-umeed tx staking delegate umeevaloper16r2uatrq2cfqjzj7m06edkehnhzgrsqrtd62l6 19uumee --from validator --keyring-backend test --chain-id test
-"gas_used":"124256"
 
+umeed tx staking delegate umeevaloper16r2uatrq2cfqjzj7m06edkehnhzgrsqrtd62l6 19uumee --from val --chain-id umeevengers-1c --fees 150uumee
 umeed q bank balances umee16r2uatrq2cfqjzj7m06edkehnhzgrsqrtfa9ws 
