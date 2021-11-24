@@ -108,18 +108,14 @@ func main() {
 	if err := d.Next(); err != nil {
 		panic(fmt.Errorf("get next account: %w", err))
 	}
-
+	count := 0
 	for {
-
+		println("LOOP count:", count)
 		coin := sdktypes.NewCoins(sdktypes.NewCoin("uumee", sdktypes.NewInt(1000)))
 		sendMsg := &banktypes.MsgSend{
 			FromAddress: "umee1fp0sc558kxrnc5rvyym4wesl365s2emkwkjvks",
 			ToAddress:   "umee1fp0sc558kxrnc5rvyym4wesl365s2emkwkjvks",
 			Amount:      coin,
-		}
-
-		if err := sendMsg.ValidateBasic(); err != nil {
-			panic(fmt.Errorf("msgs err: %w", err))
 		}
 
 		accSeq := d.IncAccSeq()
@@ -154,6 +150,8 @@ func main() {
 				panic(fmt.Sprintf("%#v\n", resp.TxResponse))
 			}
 		}
+		count++
+		//time.Sleep(1000 * time.Millisecond)
 
 	}
 
