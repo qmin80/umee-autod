@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
@@ -171,6 +173,23 @@ func main() {
 						}
 						log.Warn().Str("addr", d.Addr()).Uint64("seq", d.AccSeq()).Msgf("received %#v, using next account", resp.TxResponse)
 						time.Sleep(500 * time.Millisecond)
+						///unsafe_flush_mempool
+						req, err := http.NewRequest("GET", "http://127.0.0.1:26657/unsafe_flush_mempool", nil)
+						if err != nil {
+							panic(err)
+						}
+						clienthttp := &http.Client{}
+						resp, err := clienthttp.Do(req)
+						if err != nil {
+							panic(err)
+						}
+						defer resp.Body.Close()
+
+						bytes, _ := ioutil.ReadAll(resp.Body)
+						str := string(bytes)
+						fmt.Println(str)
+						fmt.Println(client.RPC.NumUnconfirmedTxs(ctx))
+
 						break
 					} else {
 						panic(fmt.Sprintf("%#v\n", resp.TxResponse))

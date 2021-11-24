@@ -14,4 +14,4 @@ memo = ""
 boom_denom = "uumee"
 boom_amount = 1000
 boom_addr = "umee1fp0sc558kxrnc5rvyym4wesl365s2emkwkjvks"
-boom_NumTxsPerBlock = 10
+boom_NumTxsPerBlock = 500
