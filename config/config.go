@@ -34,14 +34,15 @@ type GRPCConfig struct {
 	Address string `toml:"address"`
 }
 type CustomConfig struct {
-	Mnemonics  []string `toml:"mnemonics"`
-	GasLimit   int64    `toml:"gas_limit"`
-	FeeDenom   string   `toml:"fee_denom"`
-	FeeAmount  int64    `toml:"fee_amount"`
-	Memo       string   `toml:"memo"`
-	BoomDenom  string   `toml:"boom_denom"`
-	BoomAmount int64    `toml:"boom_amount"`
-	BoomAddr   string   `toml:"boom_addr"`
+	Mnemonics          []string `toml:"mnemonics"`
+	GasLimit           int64    `toml:"gas_limit"`
+	FeeDenom           string   `toml:"fee_denom"`
+	FeeAmount          int64    `toml:"fee_amount"`
+	Memo               string   `toml:"memo"`
+	BoomDenom          string   `toml:"boom_denom"`
+	BoomAmount         int64    `toml:"boom_amount"`
+	BoomAddr           string   `toml:"boom_addr"`
+	BoomNumTxsPerBlock int      `toml:"boom_NumTxsPerBlock"`
 }
 
 // SetupConfig takes the path to a configuration file and returns the properly parsed configuration.

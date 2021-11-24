@@ -9,6 +9,7 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/rs/zerolog/log"
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
 	"github.com/nodebreaker0-0/umee-autod/client"
 	"github.com/nodebreaker0-0/umee-autod/config"
@@ -109,50 +110,80 @@ func main() {
 		panic(fmt.Errorf("get next account: %w", err))
 	}
 	count := 0
+
+	st, err := client.RPC.Status(ctx)
+	if err != nil {
+		fmt.Println("get status: %w", err)
+	}
+	startingHeight := st.SyncInfo.LatestBlockHeight + 2
+	log.Info().Msgf("current block height is %d, waiting for the next block to be committed", st.SyncInfo.LatestBlockHeight)
+
+	if err := rpcclient.WaitForHeight(client.RPC, startingHeight-1, nil); err != nil {
+		fmt.Println("wait for height: %w", err)
+	}
+
+	targetHeight := startingHeight
+
 	for {
-		println("LOOP count:", count)
-		coin := sdktypes.NewCoins(sdktypes.NewCoin(cfg.Custom.BoomDenom, sdktypes.NewInt(cfg.Custom.BoomAmount)))
-		sendMsg := &banktypes.MsgSend{
-			FromAddress: cfg.Custom.BoomAddr,
-			ToAddress:   cfg.Custom.BoomAddr,
-			Amount:      coin,
-		}
-
-		accSeq := d.IncAccSeq()
-		txByte, err := tx.Sign(ctx, accSeq, d.AccNum(), d.PrivKey(), sendMsg)
+		st, err := client.RPC.Status(ctx)
 		if err != nil {
-			panic(fmt.Errorf("sign tx: %w", err))
+			fmt.Println("get status: %w", err)
 		}
-		resp, err := client.GRPC.BroadcastTx(ctx, txByte)
-		if err != nil {
-			panic(fmt.Errorf("broadcast tx: %w", err))
+		if st.SyncInfo.LatestBlockHeight != targetHeight-1 {
+			log.Warn().Int64("expected", targetHeight-1).Int64("got", st.SyncInfo.LatestBlockHeight).Msg("mismatching block height")
+			targetHeight = st.SyncInfo.LatestBlockHeight + 1
 		}
-
-		if resp.TxResponse.Code != 0 {
-			if resp.TxResponse.Code == 0x5 {
-				log.Warn().Msg("insufficient funds, stopping")
-				d.DecAccSeq()
-				continue
+		sent := 0
+	loop:
+		for sent < cfg.Custom.BoomNumTxsPerBlock {
+			coin := sdktypes.NewCoins(sdktypes.NewCoin(cfg.Custom.BoomDenom, sdktypes.NewInt(cfg.Custom.BoomAmount)))
+			sendMsg := &banktypes.MsgSend{
+				FromAddress: cfg.Custom.BoomAddr,
+				ToAddress:   cfg.Custom.BoomAddr,
+				Amount:      coin,
 			}
-			if resp.TxResponse.Code == 0x14 {
-				log.Warn().Msg("mempool is full, stopping")
-				d.DecAccSeq()
-				continue
-			}
-			if resp.TxResponse.Code == 0x13 || resp.TxResponse.Code == 0x20 {
-				if err := d.Next(); err != nil {
-					panic(fmt.Errorf("get next account: %w", err))
+			for sent < cfg.Custom.BoomNumTxsPerBlock {
+				println("LOOP count:", count)
+				accSeq := d.IncAccSeq()
+				txByte, err := tx.Sign(ctx, accSeq, d.AccNum(), d.PrivKey(), sendMsg)
+				if err != nil {
+					panic(fmt.Errorf("sign tx: %w", err))
 				}
-				log.Warn().Str("addr", d.Addr()).Uint64("seq", d.AccSeq()).Msgf("received %#v, using next account", resp.TxResponse)
-				time.Sleep(500 * time.Millisecond)
-				break
-			} else {
-				panic(fmt.Sprintf("%#v\n", resp.TxResponse))
+				resp, err := client.GRPC.BroadcastTx(ctx, txByte)
+				if err != nil {
+					panic(fmt.Errorf("broadcast tx: %w", err))
+				}
+
+				if resp.TxResponse.Code != 0 {
+					if resp.TxResponse.Code == 0x5 {
+						log.Warn().Msg("insufficient funds, stopping")
+						d.DecAccSeq()
+						break loop
+					}
+					if resp.TxResponse.Code == 0x14 {
+						log.Warn().Msg("mempool is full, stopping")
+						d.DecAccSeq()
+						break loop
+					}
+					if resp.TxResponse.Code == 0x13 || resp.TxResponse.Code == 0x20 {
+						if err := d.Next(); err != nil {
+							panic(fmt.Errorf("get next account: %w", err))
+						}
+						log.Warn().Str("addr", d.Addr()).Uint64("seq", d.AccSeq()).Msgf("received %#v, using next account", resp.TxResponse)
+						time.Sleep(500 * time.Millisecond)
+						break
+					} else {
+						panic(fmt.Sprintf("%#v\n", resp.TxResponse))
+					}
+				}
+				count++
+				sent++
 			}
 		}
-		count++
-		//time.Sleep(1000 * time.Millisecond)
-
+		if err := rpcclient.WaitForHeight(client.RPC, targetHeight, nil); err != nil {
+			fmt.Println("wait for height: %w", err)
+		}
+		targetHeight++
 	}
 
 }
