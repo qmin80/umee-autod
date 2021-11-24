@@ -11,4 +11,6 @@ gas_limit = 150000
 fee_denom = "uumee"
 fee_amount = 0
 memo = ""
+boom_denom = "uumee"
+boom_amount = 1000
 boom_addr = "umee1fp0sc558kxrnc5rvyym4wesl365s2emkwkjvks"

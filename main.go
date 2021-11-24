@@ -111,7 +111,7 @@ func main() {
 	count := 0
 	for {
 		println("LOOP count:", count)
-		coin := sdktypes.NewCoins(sdktypes.NewCoin("uumee", sdktypes.NewInt(1000)))
+		coin := sdktypes.NewCoins(sdktypes.NewCoin(cfg.Custom.BoomDenom, sdktypes.NewInt(cfg.Custom.BoomAmount)))
 		sendMsg := &banktypes.MsgSend{
 			FromAddress: cfg.Custom.BoomAddr,
 			ToAddress:   cfg.Custom.BoomAddr,
