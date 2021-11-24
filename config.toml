@@ -11,4 +11,4 @@ gas_limit = 150000
 fee_denom = "uumee"
 fee_amount = 0
 memo = ""
-validatoraddr = "umeevaloper1fp0sc558kxrnc5rvyym4wesl365s2emkwj4r86"
+boom_addr = "umee1fp0sc558kxrnc5rvyym4wesl365s2emkwkjvks"

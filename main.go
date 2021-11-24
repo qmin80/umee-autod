@@ -113,8 +113,8 @@ func main() {
 		println("LOOP count:", count)
 		coin := sdktypes.NewCoins(sdktypes.NewCoin("uumee", sdktypes.NewInt(1000)))
 		sendMsg := &banktypes.MsgSend{
-			FromAddress: "umee1fp0sc558kxrnc5rvyym4wesl365s2emkwkjvks",
-			ToAddress:   "umee1fp0sc558kxrnc5rvyym4wesl365s2emkwkjvks",
+			FromAddress: cfg.Custom.BoomAddr,
+			ToAddress:   cfg.Custom.BoomAddr,
 			Amount:      coin,
 		}
 

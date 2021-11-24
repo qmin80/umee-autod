@@ -9,6 +9,7 @@ import (
 	"github.com/pelletier/go-toml"
 
 	"errors"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -33,12 +34,12 @@ type GRPCConfig struct {
 	Address string `toml:"address"`
 }
 type CustomConfig struct {
-	Mnemonics     []string `toml:"mnemonics"`
-	GasLimit      int64    `toml:"gas_limit"`
-	FeeDenom      string   `toml:"fee_denom"`
-	FeeAmount     int64    `toml:"fee_amount"`
-	Memo          string   `toml:"memo"`
-	ValidatorAddr string   `toml:"validatoraddr"`
+	Mnemonics []string `toml:"mnemonics"`
+	GasLimit  int64    `toml:"gas_limit"`
+	FeeDenom  string   `toml:"fee_denom"`
+	FeeAmount int64    `toml:"fee_amount"`
+	Memo      string   `toml:"memo"`
+	BoomAddr  string   `toml:"boom_addr"`
 }
 
 // SetupConfig takes the path to a configuration file and returns the properly parsed configuration.
